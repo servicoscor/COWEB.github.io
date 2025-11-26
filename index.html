@@ -344,6 +344,7 @@
     const pastaEstagios = "estagios";
     const extensao = ".jpg";
     let estagioAtual = 1;
+    window.estagioAtual = estagioAtual; // Expõe para debug no console
     
     // URL da API de estágio externa (sincronização automática)
     const API_ESTAGIO_URL = "https://aplicativo.cocr.com.br/estagio_api_app";
@@ -518,6 +519,7 @@
       item.dataset.estagio = i;
       item.addEventListener('click', function (e) {
         estagioAtual = Number(this.dataset.estagio);
+        window.estagioAtual = estagioAtual; // Atualiza global para debug
         estagioImgBanner.src = `${pastaEstagios}/estagio${estagioAtual}${extensao}`;
         menuEstagios.querySelectorAll('.estagio-item').forEach(el => el.classList.remove('selected'));
         this.classList.add('selected');
@@ -689,6 +691,7 @@
       if (estagioAPI) {
         // Se conseguiu da API, usa esse valor
         estagioAtual = estagioAPI;
+        window.estagioAtual = estagioAtual; // Atualiza global para debug
         estagioImgBanner.src = `${pastaEstagios}/estagio${estagioAtual}${extensao}`;
         menuEstagios.querySelectorAll('.estagio-item').forEach((el, i) => {
           el.classList.toggle('selected', i + 1 === estagioAtual);
@@ -701,6 +704,7 @@
         const docSnap = await getDoc(doc(db, "painel", "estagio_atual"));
         if (docSnap.exists() && docSnap.data().valor) {
           estagioAtual = docSnap.data().valor;
+          window.estagioAtual = estagioAtual; // Atualiza global para debug
           estagioImgBanner.src = `${pastaEstagios}/estagio${estagioAtual}${extensao}`;
           menuEstagios.querySelectorAll('.estagio-item').forEach((el, i) => {
             el.classList.toggle('selected', i + 1 === estagioAtual);
@@ -760,6 +764,7 @@
       if (novoEstagio && novoEstagio !== estagioAtual) {
         console.log(`🔄 API mudou estágio: ${estagioAtual} → ${novoEstagio}`);
         estagioAtual = novoEstagio;
+        window.estagioAtual = estagioAtual; // Atualiza global para debug
         estagioImgBanner.src = `${pastaEstagios}/estagio${estagioAtual}${extensao}`;
         menuEstagios.querySelectorAll('.estagio-item').forEach((el, i) => {
           el.classList.toggle('selected', i + 1 === estagioAtual);
