@@ -758,7 +758,7 @@
       const novoEstagio = await buscarEstagioAPI();
       
       if (novoEstagio && novoEstagio !== estagioAtual) {
-        console.log(`🔄 Estágio mudou de ${estagioAtual} para ${novoEstagio}`);
+        console.log(`🔄 API mudou estágio: ${estagioAtual} → ${novoEstagio}`);
         estagioAtual = novoEstagio;
         estagioImgBanner.src = `${pastaEstagios}/estagio${estagioAtual}${extensao}`;
         menuEstagios.querySelectorAll('.estagio-item').forEach((el, i) => {
