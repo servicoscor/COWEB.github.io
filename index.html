@@ -348,12 +348,14 @@
     
     // URL da API de estágio externa (sincronização automática)
     const API_ESTAGIO_URL = "https://aplicativo.cocr.com.br/estagio_api_app";
+    const API_CALOR_URL = "https://aplicativo.cocr.com.br/calor_api";
 
     // Seletor de Niveis de Calor
     const totalCalor = 5;
     const pastaCalor = "nils-calor";
     const extCalor = ".jpg";
     let calorAtual = 1;
+    window.calorAtual = calorAtual; // Expõe para debug no console
 
     /* Seletor do Gerenciar Sistemas Web */
     let sites = [];
@@ -774,16 +776,95 @@
       }
     }
 
-    async function buscarCalorInicial() {
-      console.log("Rodando buscarCalorInicial...");
-      const docSnap = await getDoc(doc(db, "painel", "calor_atual"));
-      if (docSnap.exists() && docSnap.data().valor) {
-        calorAtual = docSnap.data().valor;
+    // Função para buscar calor da API externa
+    async function buscarCalorAPI() {
+      try {
+        console.log("Buscando calor da API externa...");
+        const response = await fetch(API_CALOR_URL, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.text();
+        
+        // A API retorna "calor 1", "calor 2", etc. - extrai o número
+        let calor;
+        
+        // Tenta extrair número do texto (ex: "calor 1" -> 1)
+        const match = data.match(/(\d+)/);
+        if (match) {
+          calor = parseInt(match[1]);
+        } else {
+          // Tenta parse direto caso seja só número
+          calor = parseInt(data.trim());
+        }
+        
+        // Valida se é um número válido entre 1 e 5
+        if (calor && calor >= 1 && calor <= 5) {
+          console.log("✅ Calor obtido da API:", calor);
+          return calor;
+        } else {
+          console.warn("⚠️ Valor de calor inválido da API:", data);
+          return null;
+        }
+        
+      } catch (error) {
+        console.error("❌ Erro ao buscar calor da API:", error);
+        return null;
+      }
+    }
+
+    // Função para sincronizar calor com a API periodicamente
+    async function sincronizarCalorComAPI() {
+      const novoCalor = await buscarCalorAPI();
+      
+      if (novoCalor && novoCalor !== calorAtual) {
+        console.log(`🔄 API mudou calor: ${calorAtual} → ${novoCalor}`);
+        calorAtual = novoCalor;
+        window.calorAtual = calorAtual; // Atualiza global para debug
         calorImgBanner.src = `${pastaCalor}/calor${calorAtual}${extCalor}`;
         menuCalor.querySelectorAll('.calor-item').forEach((el, i) => {
           el.classList.toggle('selected', i + 1 === calorAtual);
         });
-        console.log("Calor inicial do Firestore:", calorAtual);
+        // Atualiza o Firebase também
+        await atualizarCalorFirebase(calorAtual);
+      }
+    }
+
+    async function buscarCalorInicial() {
+      console.log("Rodando buscarCalorInicial...");
+      
+      // Primeiro tenta buscar da API externa
+      const calorAPI = await buscarCalorAPI();
+      
+      if (calorAPI) {
+        // Se conseguiu da API, usa esse valor
+        calorAtual = calorAPI;
+        window.calorAtual = calorAtual; // Atualiza global para debug
+        calorImgBanner.src = `${pastaCalor}/calor${calorAtual}${extCalor}`;
+        menuCalor.querySelectorAll('.calor-item').forEach((el, i) => {
+          el.classList.toggle('selected', i + 1 === calorAtual);
+        });
+        // Atualiza também o Firebase para manter sincronizado
+        await atualizarCalorFirebase(calorAtual);
+        console.log("Calor atualizado da API:", calorAtual);
+      } else {
+        // Fallback: busca do Firebase se a API falhar
+        const docSnap = await getDoc(doc(db, "painel", "calor_atual"));
+        if (docSnap.exists() && docSnap.data().valor) {
+          calorAtual = docSnap.data().valor;
+          window.calorAtual = calorAtual; // Atualiza global para debug
+          calorImgBanner.src = `${pastaCalor}/calor${calorAtual}${extCalor}`;
+          menuCalor.querySelectorAll('.calor-item').forEach((el, i) => {
+            el.classList.toggle('selected', i + 1 === calorAtual);
+          });
+          console.log("Calor inicial do Firestore (fallback):", calorAtual);
+        }
       }
     }
 
@@ -1121,6 +1202,10 @@
       // 7) Sincroniza o estágio com a API externa a cada 5 segundos
       console.log("🔄 Iniciando sincronização automática com API de estágio...");
       setInterval(sincronizarEstagioComAPI, 5000);
+      
+      // 8) Sincroniza o calor com a API externa a cada 5 segundos
+      console.log("🔥 Iniciando sincronização automática com API de calor...");
+      setInterval(sincronizarCalorComAPI, 5000);
 
       if (btnCadastrar && btnLimpar) {
         btnCadastrar.addEventListener("click", cadastrarAnyDesk);
