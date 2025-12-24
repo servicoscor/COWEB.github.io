@@ -548,6 +548,7 @@
       item.dataset.calor = i;
       item.addEventListener('click', function (e) {
         calorAtual = Number(this.dataset.calor);
+        window.calorAtual = calorAtual; // Atualiza global para debug
         calorImgBanner.src = `${pastaCalor}/calor${calorAtual}${extCalor}`;
         menuCalor.querySelectorAll('.calor-item').forEach(el => el.classList.remove('selected'));
         this.classList.add('selected');
